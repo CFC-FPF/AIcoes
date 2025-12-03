@@ -1,18 +1,15 @@
 {
-  "name": "stock-predictor",
-  "private": true,
-  "workspaces": ["packages/*"],
-  "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
-    "dev:backend": "npm run dev --workspace=backend",
-    "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspaces",
-    "type-check": "npm run type-check --workspaces"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
   "compilerOptions": {
-    "version": true
-  }
+    "target": "ES2022",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

@@ -1,6 +1,5 @@
 {
   "name": "stock-predictor",
-  "version": "1.0.0",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
@@ -12,5 +11,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "compilerOptions": {
+    "version": true
   }
 }

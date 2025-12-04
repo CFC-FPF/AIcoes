@@ -1,14 +1,21 @@
 // PRIMEIRO: carrega dotenv ANTES de qualquer outro import
 import dotenv from 'dotenv';
 import path from 'path';
-const envPath = path.resolve(process.cwd(), 'packages', 'backend', '.env');
+const envPath = path.resolve(__dirname, '..', '.env');
 const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.error('❌ Failed to load .env:', result.error);
+} else {
+  console.log('✅ .env loaded successfully');
+}
+
+console.log('🔑 SUPABASE_URL:', process.env.SUPABASE_URL ? 'EXISTS ✓' : 'MISSING ✗');
+console.log('🔑 SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? 'EXISTS ✓' : 'MISSING ✗');
 
 // AGORA sim, os outros imports
 import express from 'express';
 import cors from 'cors';
-import { testConnection } from './lib/supabase';
-import stocksRouter from './routes/stocks';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,11 +31,19 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use('/api/stocks', stocksRouter);
+// Inicializa tudo DEPOIS
+async function startServer() {
+  const { default: stocksRouter } = await import('./routes/stocks.js');
+  const { testConnection } = await import('./lib/supabase.js');
+  
+  app.use('/api/stocks', stocksRouter);
+  
+  await testConnection();
+  
+  app.listen(PORT, () => {
+    console.log(`🚀 Backend running on http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  });
+}
 
-testConnection();
-
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-});
+startServer().catch(console.error);

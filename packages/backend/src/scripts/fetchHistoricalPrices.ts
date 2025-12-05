@@ -1,3 +1,7 @@
+// PRIMEIRO: carrega as variáveis de ambiente
+import "./loadEnv";
+
+// AGORA sim, os outros imports
 import axios from "axios";
 import { supabase } from "../lib/supabase";
 import type { Stock, Price, YahooQuote, YahooFinanceResponse } from "shared";

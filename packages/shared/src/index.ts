@@ -60,3 +60,30 @@ export interface StockWithLatestPrice extends Stock {
   latest_price?: number;
   latest_trade_date?: string;
 }
+
+// Yahoo Finance API types
+export interface YahooQuote {
+  date: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface YahooFinanceResponse {
+  chart: {
+    result: Array<{
+      timestamp: number[];
+      indicators: {
+        quote: Array<{
+          open: number[];
+          high: number[];
+          low: number[];
+          close: number[];
+          volume: number[];
+        }>;
+      };
+    }>;
+  };
+}

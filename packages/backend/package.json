@@ -6,7 +6,8 @@
     "dev": "nodemon --watch src --exec tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "fetch-prices": "tsx src/scripts/fetchHistoricalPrices.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",

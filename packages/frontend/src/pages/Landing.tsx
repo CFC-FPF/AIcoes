@@ -1,8 +1,8 @@
 import React from 'react';
-import Navbar from '../layout/Navbar';
-import HeroSection from '../sections/HeroSection';
+import { Navbar } from '../../components/layout';
+import { HeroSection } from '../../components/sections';
 
-const StockAILanding: React.FC = () => {
+const Landing: React.FC = () => {
   const handleSearch = (query: string) => {
     // Add your search logic here
     console.log('Searching for:', query);
@@ -17,4 +17,4 @@ const StockAILanding: React.FC = () => {
   );
 };
 
-export default StockAILanding;
+export default Landing;

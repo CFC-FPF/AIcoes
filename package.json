@@ -1,4 +1,4 @@
- {
+{
   "name": "aicoes",
   "version": "1.0.0",
   "description": "AI-powered stock prediction platform",
@@ -14,7 +14,8 @@
     "type-check": "npm run type-check --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "jiti": "^2.6.1"
   },
   "repository": {
     "type": "git",

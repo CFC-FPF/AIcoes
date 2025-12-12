@@ -6,7 +6,7 @@ export default {
   ],
   theme: {
     extend: {
-      
+
       colors: {
         'bg-dark': '#0a1628',
         'bg-input': '#1a2942',

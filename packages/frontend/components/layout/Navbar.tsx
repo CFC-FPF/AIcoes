@@ -7,8 +7,12 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ className = '' }) => {
   return (
-    <nav className={`flex items-center justify-between px-8 py-6 ${className}`}>
-      <Logo />
+
+
+    <nav className={`w-full ${className}`}>
+      <div className="flex items-center justify-between px-8 py-6 max-w-[1400px] mx-auto">
+
+<Logo />
       
       <div className="flex gap-8">
         <a
@@ -24,6 +28,8 @@ const Navbar: React.FC<NavbarProps> = ({ className = '' }) => {
           Dashboard
         </a>
       </div>
+      </div>
+      
     </nav>
   );
 };

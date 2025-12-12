@@ -10,10 +10,12 @@ const Landing: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a1628] text-white">
-      <Navbar />
-      <HeroSection onSearch={handleSearch} />
-    </div>
+ <div className="min-h-screen bg-[#0a1628] flex flex-col text-white ">
+    <Navbar />  
+    <main className="flex-1 flex items-center justify-center text-white">
+      <HeroSection />  
+    </main>
+  </div>
   );
 };
 

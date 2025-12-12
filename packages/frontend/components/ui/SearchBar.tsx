@@ -23,7 +23,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <div className={`flex-1 relative ${className}`}>
-            {/* Using Heroicons wallet-solid icon */}
+            
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
@@ -40,7 +40,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={placeholder}
-                className="w-full pl-12 pr-4 py-4 bg-[#1a2942] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                className="w-full pl-12 pr-4 py-input-y bg-[#1a2942] border border-gray-700 rounded-component text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
             />
         </div>
     );

@@ -19,7 +19,7 @@ const SearchTextBox: React.FC<SearchTextBoxProps> = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full px-4 py-3 bg-[#1a2942] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors ${className}`}
+      className={`w-full px-input-x py-input-y bg-[#1a2942] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors ${className}`}
     />
   );
 };

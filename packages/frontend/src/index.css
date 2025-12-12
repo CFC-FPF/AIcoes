@@ -1,7 +1,16 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+@theme {
+  --color-brand-light: #7C3AED;
+  --color-brand-dark: #4F46E5;
+  --color-bg-dark: #0a1628;
+  --color-bg-input: #1a2942;
+
+  --spacing-input-x: 2rem;
+  --spacing-input-y: 1rem;
+
+  --radius-component: 1rem;
+}
 
 /* Global page structure */
 #root {

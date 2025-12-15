@@ -2,6 +2,7 @@ import React from 'react';
 import Card from '../ui/Card';
 import CompanyHeader from '../ui/CompanyHeader';
 import InfoField from '../ui/InfoField';
+import type { Stock } from '../../../shared/src/index'
 
 interface CompanyInfoProps {
   name: string;
@@ -35,6 +36,7 @@ const CompanyInfo: React.FC<CompanyInfoProps> = ({
   description,
   logoUrl,
   logoIcon
+  
 }) => {
   return (
     <Card>

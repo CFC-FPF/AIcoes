@@ -82,9 +82,70 @@ All routes are prefixed with `/api/stocks`:
 
 ### Frontend Architecture
 
-- **API Integration:** Frontend expects backend at `http://localhost:3001`
-- **Main Component:** `App.tsx` demonstrates health check integration with backend
-- **Styling:** Uses Tailwind utility classes (dark theme: `bg-gray-900`, `text-white`)
+#### Component Structure
+- **Components:** Located in `components/` directory (NOT inside `src/`)
+  - `components/ui/` - Reusable UI components (Button, SearchBar, etc.)
+  - `components/layout/` - Layout components (Navbar, etc.)
+  - `components/sections/` - Page sections (HeroSection, etc.)
+- **Pages:** Located in `src/pages/`
+- **Routing:** React Router DOM v7 for client-side routing
+
+#### Tailwind CSS v4 Configuration (IMPORTANT)
+
+**Critical:** This project uses **Tailwind CSS v4**, which has a different configuration approach than v3:
+
+1. **Theme Configuration Location:**
+   - Custom theme values MUST be defined in `src/index.css` using the `@theme` directive
+   - `tailwind.config.js` is ONLY used for specifying which files to scan (`content` array)
+   - DO NOT add theme customizations to `tailwind.config.js` - they won't work
+
+2. **Example Theme Configuration** (`src/index.css`):
+   ```css
+   @import "tailwindcss";
+
+   @theme {
+     --color-brand-light: #7C3AED;
+     --color-brand-dark: #4F46E5;
+     --spacing-input-x: 2rem;
+     --radius-component: 1rem;
+   }
+   ```
+
+3. **Naming Patterns:**
+   - Colors: `--color-{name}` → Use as `text-{name}`, `bg-{name}`, `from-{name}`, `to-{name}`
+   - Spacing: `--spacing-{name}` → Use as `p-{name}`, `m-{name}`, `gap-{name}`, `w-{name}`, `h-{name}`
+   - Border Radius: `--radius-{name}` → Use as `rounded-{name}`
+
+4. **Required Dependencies:**
+   - `@tailwindcss/postcss` - PostCSS plugin for Tailwind v4
+   - `jiti` - Required by Tailwind v4 for config loading
+   - `lightningcss` - Fast CSS processing for Tailwind v4
+
+5. **Content Scanning** (`tailwind.config.js`):
+   ```js
+   content: ["./**/*.{js,ts,jsx,tsx}"]  // Scans ALL files in frontend directory
+   ```
+
+6. **PostCSS Configuration** (`postcss.config.js`):
+   ```js
+   plugins: {
+     '@tailwindcss/postcss': {},  // NOT 'tailwindcss'
+     autoprefixer: {},
+   }
+   ```
+
+#### Debugging Tailwind Issues
+
+If custom Tailwind classes aren't working:
+1. Check if value is defined in `@theme` block in `src/index.css`
+2. Verify file is being scanned (check `tailwind.config.js` content array)
+3. Clear Vite cache: `rm -rf node_modules/.vite`
+4. Inspect element in browser DevTools to see if CSS is generated
+5. Check dev server logs for PostCSS errors
+
+#### API Integration
+- Frontend expects backend at `http://localhost:3001`
+- Uses React Router DOM for routing
 
 ## Important Notes
 

@@ -9,7 +9,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/:symbol" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );

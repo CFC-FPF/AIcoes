@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Navbar } from '../../components/layout';
-import { CompanyInfo } from '../../components/sections'
+import { CompanyInfo } from '../../components/sections';
 import type { Stock } from '../../../shared/src/index';
+
 
 async function fetchStockInfo(symbol: string) {
   const response = await fetch(`http://localhost:3001/api/stocks/${symbol}`);
@@ -16,14 +18,27 @@ async function fetchStockInfo(symbol: string) {
 
 
 const Dashboard: React.FC = () => {
+  // Get the stock symbol from the URL parameter
+  const { symbol } = useParams<{ symbol: string }>();
 
   const [stock, setStock] = useState<Stock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   useEffect(() => {
-    fetchStockInfo('MSFT')
+    // Don't fetch if no symbol in URL
+    if (!symbol) {
+      setError('No stock symbol provided');
+      setLoading(false);
+      return;
+    }
+
+    // Reset states when symbol changes
+    setLoading(true);
+    setError(null);
+
+    // Fetch stock data using the symbol from URL
+    fetchStockInfo(symbol)
       .then(data => {
         setStock(data);
         setLoading(false);
@@ -32,7 +47,7 @@ const Dashboard: React.FC = () => {
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [symbol]); // Re-fetch when symbol changes
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;

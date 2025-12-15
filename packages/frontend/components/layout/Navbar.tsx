@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Logo from '../ui/Logo';
+
 
 interface NavbarProps {
   className?: string;
@@ -15,18 +17,18 @@ const Navbar: React.FC<NavbarProps> = ({ className = '' }) => {
 <Logo />
       
       <div className="flex gap-8">
-        <a
-          href="#"
+        <Link
+          to="/"
           className="text-gray-300 hover:text-white transition-colors"
         >
           Home
-        </a>
-        <a
-          href="#"
+        </Link>
+        <Link
+          to="/dashboard"
           className="text-gray-300 hover:text-white transition-colors"
         >
           Dashboard
-        </a>
+        </Link>
       </div>
       </div>
       

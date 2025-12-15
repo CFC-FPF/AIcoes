@@ -2,14 +2,10 @@ import React from 'react';
 import Card from '../ui/Card';
 import CompanyHeader from '../ui/CompanyHeader';
 import InfoField from '../ui/InfoField';
+import type { StockWithLatestPrice } from '../../../shared/src/index';
 
 interface CompanyInfoProps {
-  name: string;
-  ticker: string;
-  branch: string;
-  ceo: string;
-  website: string;
-  description: string;
+  stock: StockWithLatestPrice;
   logoUrl?: string;
   logoIcon?: React.ReactNode;
 }
@@ -27,22 +23,16 @@ interface CompanyInfoProps {
  * - InfoField: Individual field rows with labels and values
  */
 const CompanyInfo: React.FC<CompanyInfoProps> = ({
-  name,
-  ticker,
-  branch,
-  ceo,
-  website,
-  description,
+  stock,
   logoUrl,
-  logoIcon
-  
+  logoIcon  
 }) => {
   return (
     <Card>
       {/* Company name, ticker, and logo */}
       <CompanyHeader
-        name={name}
-        ticker={ticker}
+        name={stock.name}
+        ticker={stock.symbol}
         logoUrl={logoUrl}
         logoIcon={logoIcon}
       />
@@ -51,28 +41,28 @@ const CompanyInfo: React.FC<CompanyInfoProps> = ({
       <div className="mb-6">
         {/* Branch/Industry field */}
         <InfoField
-          label="Branch"
-          value={branch}
+          label="Industry"
+          value={stock.industry || 'N/A'}
         />
 
         {/* CEO field */}
         <InfoField
           label="CEO"
-          value={ceo}
+          value={stock.ceo_name || 'N/A'}
         />
 
         {/* Website field with link */}
         <InfoField
           label="Website"
-          value={website}
+          value={stock.website_url || 'N/A'}
           isLink={true}
-          linkUrl={`https://${website}`}
+          linkUrl={stock.website_url || '#'}
         />
       </div>
 
       {/* Company description */}
       <div className="text-gray-300 text-sm leading-relaxed">
-        {description}
+        {stock.description || 'N/A'}
       </div>
     </Card>
   );

@@ -45,6 +45,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           onChange={setSearchQuery}
           onSearch={handleSearch}
           placeholder="Search for a company (e.g., Apple, Tesla...)"
+          autoFocus
         />
         <Button onClick={handleSearch} loading={isSearching}>
           Search

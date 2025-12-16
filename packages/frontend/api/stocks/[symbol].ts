@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase';
-import { ensureFreshPrices } from '../lib/priceCache';
+import { supabase } from '../lib/supabase.js';
+import { ensureFreshPrices } from '../lib/priceCache.js';
 
 export default async function handler(
   req: VercelRequest,

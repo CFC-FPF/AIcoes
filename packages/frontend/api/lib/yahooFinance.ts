@@ -1,4 +1,4 @@
-import type { YahooQuote, YahooFinanceResponse } from 'shared';
+import type { YahooQuote, YahooFinanceResponse } from '../../../shared/src/index.js';
 
 /**
  * Fetches historical price data from Yahoo Finance

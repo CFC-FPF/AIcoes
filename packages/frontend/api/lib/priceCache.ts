@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { fetchYahooFinance, upsertPrices } from './yahooFinance';
+import { supabase } from './supabase.js';
+import { fetchYahooFinance, upsertPrices } from './yahooFinance.js';
 
 const ONE_HOUR = 60 * 60 * 1000;
 

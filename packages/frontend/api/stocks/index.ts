@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase';
-import type { Stock, ApiResponse } from 'shared';
+import { supabase } from '../lib/supabase.js';
+import type { Stock, ApiResponse } from '../../../shared/src/index.js';
 
 export default async function handler(
   req: VercelRequest,

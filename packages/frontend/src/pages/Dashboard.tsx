@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout';
 import { CompanyInfo } from '../../components/sections';
 import type { Stock } from '../../../shared/src/index';
+import SearchBar from '../../components/ui/SearchBar';
+import Button from '../../components/ui/Button';
+import { FaMagnifyingGlass } from 'react-icons/fa6';
+
+
+interface DashboardProps {
+  onSearch?: (query: string) => void;
+}
+
 
 
 async function fetchStockInfo(symbol: string) {
@@ -17,13 +26,29 @@ async function fetchStockInfo(symbol: string) {
 }
 
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC<DashboardProps> = ({
+  onSearch,
+}) => {
   // Get the stock symbol from the URL parameter
   const { symbol } = useParams<{ symbol: string }>();
+  const navigate = useNavigate();
 
   const [stock, setStock] = useState<Stock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch(searchQuery);
+    } else if (searchQuery.trim()) {
+      // Navigate to the new stock symbol
+      navigate(`/dashboard/${searchQuery.trim().toUpperCase()}`);
+    }
+  };
+
+  
 
   useEffect(() => {
     // Don't fetch if no symbol in URL
@@ -68,6 +93,17 @@ const Dashboard: React.FC = () => {
 
           {/* Left section - 1/3 of the space */}
           <aside className="w-1/3">
+          <div className="flex gap-1 w-full max-w-2xl mb-5">
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onSearch={handleSearch}
+                    placeholder="Search for a company (e.g., Apple, Tesla...)"
+                  />
+                  <Button onClick={handleSearch}>
+                    <FaMagnifyingGlass size={24} color="white" />
+                  </Button>
+                </div>
             <CompanyInfo
               stock={stock}
               logoIcon={

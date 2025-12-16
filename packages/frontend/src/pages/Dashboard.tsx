@@ -15,7 +15,8 @@ interface DashboardProps {
 
 
 async function fetchStockInfo(symbol: string) {
-  const response = await fetch(`/api/stocks/${symbol}`);
+  const API_URL = import.meta.env.VITE_API_URL || '';
+  const response = await fetch(`${API_URL}/api/stocks/${symbol}`);
   const result = await response.json();
 
   if (result.success) {

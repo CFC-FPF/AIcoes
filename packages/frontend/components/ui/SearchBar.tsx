@@ -6,6 +6,7 @@ interface SearchBarProps {
     onSearch: () => void;
     placeholder?: string;
     className?: string;
+    autoFocus?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -14,6 +15,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
     onSearch,
     placeholder = 'Search...',
     className = '',
+    autoFocus = false,
 }) => {
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -40,6 +42,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={placeholder}
+                autoFocus={autoFocus}
                 className="w-full pl-12 pr-4 py-input-y bg-[#1a2942] border border-gray-700 rounded-component text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
             />
         </div>

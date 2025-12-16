@@ -6,11 +6,13 @@ import StatCard from '../ui/StatCard';
 interface HeroSectionProps {
   onSearch?: (query: string) => void;
   className?: string;
+  isSearching?: boolean;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ 
+const HeroSection: React.FC<HeroSectionProps> = ({
   onSearch,
-  className = '' 
+  className = '',
+  isSearching = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,8 +45,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           onChange={setSearchQuery}
           onSearch={handleSearch}
           placeholder="Search for a company (e.g., Apple, Tesla...)"
+          autoFocus
         />
-        <Button onClick={handleSearch}>
+        <Button onClick={handleSearch} loading={isSearching}>
           Search
         </Button>
       </div>

@@ -23,13 +23,13 @@ const Navbar: React.FC<NavbarProps> = ({ className = '' }) => {
         >
           Home
         </Link>
-        <Link
+{/*         <Link
           to="/dashboard"
           className="text-gray-300 hover:text-white transition-colors"
         >
           Dashboard
         </Link>
-      </div>
+ */}      </div>
       </div>
       
     </nav>

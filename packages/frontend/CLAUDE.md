@@ -164,3 +164,90 @@ If custom Tailwind classes aren't working:
 - Recent work focused on fixing dotenv configuration and path resolution
 - tsconfig issues were addressed in commit history
 - gitignore was updated recently
+
+## Recent Changes & Fixes
+
+### 2024-12-16: Vercel Serverless Deployment Fixes
+
+**Problem:** Vercel deployment was failing with TypeScript and dependency errors:
+1. TypeScript TS2835 errors: "Relative import paths need explicit file extensions"
+2. Cannot find module 'shared' errors
+3. PostCSS/Tailwind dependency installation failures
+4. Dashboard route not matching (404 on `/dashboard`)
+
+**Root Causes:**
+1. **ESM Module Resolution:** `package.json` has `"type": "module"`, which makes Node.js treat all files as ES Modules. When using TypeScript with `moduleResolution: "node16"` or `"nodenext"`, Node.js requires **explicit `.js` extensions** in imports, even for `.ts` files (because at runtime they become `.js` files).
+
+2. **Shared Module Resolution:** The `'shared'` package imports weren't resolving because Vercel couldn't find the package path. Required using relative paths instead.
+
+3. **Monorepo Dependencies:** Vercel was set to build from `packages/frontend` as root directory, but couldn't access parent `node_modules` or root `package-lock.json`. The `@tailwindcss/postcss` package is managed at the monorepo root level.
+
+4. **React Router Configuration:** Router only had `/dashboard/:symbol` route, causing 404 on `/dashboard` without a symbol parameter.
+
+**Solutions Applied:**
+
+1. **Fixed API Import Paths** - Added `.js` extensions to all relative imports in `api/` directory:
+   ```typescript
+   // Before
+   import { supabase } from '../lib/supabase';
+
+   // After
+   import { supabase } from '../lib/supabase.js';
+   ```
+   Files updated:
+   - `api/stocks/[symbol]/history.ts`
+   - `api/stocks/[symbol]/predictions.ts`
+   - `api/stocks/[symbol].ts`
+   - `api/stocks/index.ts`
+   - `api/lib/priceCache.ts`
+
+2. **Fixed Shared Module Imports** - Replaced `'shared'` with relative paths:
+   ```typescript
+   // Before
+   import type { Stock, ApiResponse } from 'shared';
+
+   // After
+   import type { Stock, ApiResponse } from '../../../shared/src/index.js';
+   ```
+
+3. **Created `api/tsconfig.json`** - Proper TypeScript config for API routes:
+   ```json
+   {
+     "compilerOptions": {
+       "target": "ES2022",
+       "module": "Node16",
+       "moduleResolution": "node16",
+       ...
+     }
+   }
+   ```
+
+4. **Updated `vercel.json`** - Fixed monorepo dependency installation:
+   ```json
+   {
+     "buildCommand": "cd ../.. && npm install && cd packages/frontend && npm run build",
+     "installCommand": "cd ../.. && npm install",
+     "rewrites": [
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
+   This ensures Vercel installs dependencies from the monorepo root before building.
+
+5. **Fixed React Router** - Added catch-all `/dashboard` route in `App.tsx`:
+   ```typescript
+   <Route path="/dashboard" element={<Dashboard />} />
+   <Route path="/dashboard/:symbol" element={<Dashboard />} />
+   ```
+
+**Key Learnings:**
+- When using `"type": "module"` with Node16/NodeNext module resolution, always use `.js` extensions in imports
+- TypeScript doesn't rewrite import paths during compilation - you must reference the runtime file extension
+- Vercel builds from the specified root directory and can't access parent node_modules without custom install commands
+- Monorepo projects need explicit install/build commands in `vercel.json`
+
+**Vercel Configuration:**
+- **Root Directory:** `packages/frontend` (set in Vercel dashboard)
+- **Production Branch:** `main`
+- **Install Command:** Custom command to install from monorepo root
+- **Build Command:** Custom command to build from monorepo context

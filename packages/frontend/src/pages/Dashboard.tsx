@@ -6,7 +6,7 @@ import type { Stock } from '../../../shared/src/index';
 
 
 async function fetchStockInfo(symbol: string) {
-  const response = await fetch(`/api/stocks/${symbol}`);
+  const response = await fetch(`http://localhost:3001/api/stocks/${symbol}`);
   const result = await response.json();
 
   if (result.success) {

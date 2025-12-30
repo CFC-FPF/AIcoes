@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase";
+import { updatePricesIfNeeded } from "../lib/priceUpdater";
 import type { Stock, Price, ApiResponse } from 'shared';
 
 const router = Router();
@@ -93,6 +94,14 @@ router.get("/:symbol/history", async (req, res) => {
         success: false,
         error: "Stock not found",
       });
+    }
+
+    // Auto-update: Verifica e atualiza dados se necessário
+    try {
+      await updatePricesIfNeeded(stock.stock_id, symbol.toUpperCase());
+    } catch (updateError: any) {
+      // Log mas não falha o request - retorna dados que existem
+      console.warn(`Failed to update prices for ${symbol}:`, updateError.message);
     }
 
     // Get price history

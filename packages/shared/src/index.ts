@@ -87,3 +87,47 @@ export interface YahooFinanceResponse {
     }>;
   };
 }
+
+// Yahoo Finance Asset Profile types
+export interface YahooCompanyOfficer {
+  maxAge?: number;
+  name: string;
+  age?: number;
+  title: string;
+  yearBorn?: number;
+  fiscalYear?: number;
+  totalPay?: number;
+  exercisedValue?: number;
+  unexercisedValue?: number;
+}
+
+export interface YahooAssetProfile {
+  address1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  sector?: string;
+  longBusinessSummary?: string;
+  fullTimeEmployees?: number;
+  companyOfficers?: YahooCompanyOfficer[];
+  auditRisk?: number;
+  boardRisk?: number;
+  compensationRisk?: number;
+  shareHolderRightsRisk?: number;
+  overallRisk?: number;
+  governanceEpochDate?: number;
+  compensationAsOfEpochDate?: number;
+}
+
+export interface YahooQuoteSummaryResponse {
+  quoteSummary: {
+    result: Array<{
+      assetProfile?: YahooAssetProfile;
+    }>;
+    error: any;
+  };
+}

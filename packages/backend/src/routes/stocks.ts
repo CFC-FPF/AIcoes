@@ -30,20 +30,40 @@ router.get("/:symbol", async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    const { data, error } = await supabase
+    // Get stock with latest price from view
+    const { data: priceData, error: priceError } = await supabase
       .from("v_latest_prices")
       .select("*")
       .eq("symbol", symbol.toUpperCase())
       .single();
 
-    if (error) throw error;
+    if (priceError) throw priceError;
 
-    if (!data) {
+    if (!priceData) {
       return res.status(404).json({
         success: false,
         error: "Stock not found",
       });
     }
+
+    // Get additional company info from stocks table
+    const { data: companyData, error: companyError } = await supabase
+      .from("stocks")
+      .select("ceo_name, website_url, description")
+      .eq("symbol", symbol.toUpperCase())
+      .single();
+
+    if (companyError) {
+      console.warn("Error fetching company info:", companyError.message);
+    }
+
+    // Merge the data
+    const data = {
+      ...priceData,
+      ceo_name: companyData?.ceo_name || null,
+      website_url: companyData?.website_url || null,
+      description: companyData?.description || null,
+    };
 
     res.json({ success: true, data });
   } catch (error: any) {

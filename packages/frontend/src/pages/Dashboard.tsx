@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout';
 import { CompanyInfo } from '../../components/sections';
-import type { Stock } from '../../../shared/src/index';
+import { StockChart } from '../../components/charts';
+import type { Stock, Price, Prediction } from '../../../shared/src/index';
 import SearchBar from '../../components/ui/SearchBar';
 import Button from '../../components/ui/Button';
 import { FaMagnifyingGlass } from 'react-icons/fa6';
@@ -12,15 +13,36 @@ interface DashboardProps {
   onSearch?: (query: string) => void;
 }
 
-
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 async function fetchStockInfo(symbol: string) {
-  const API_URL = import.meta.env.VITE_API_URL || '';
   const response = await fetch(`${API_URL}/api/stocks/${symbol}`);
   const result = await response.json();
 
   if (result.success) {
-    return result.data;  // This is the Stock object
+    return result.data;
+  } else {
+    throw new Error(result.error);
+  }
+}
+
+async function fetchStockHistory(symbol: string, limit = 15) {
+  const response = await fetch(`${API_URL}/api/stocks/${symbol}/history?limit=${limit}`);
+  const result = await response.json();
+
+  if (result.success) {
+    return result.data as Price[];
+  } else {
+    throw new Error(result.error);
+  }
+}
+
+async function fetchStockPredictions(symbol: string) {
+  const response = await fetch(`${API_URL}/api/stocks/${symbol}/predictions`);
+  const result = await response.json();
+
+  if (result.success) {
+    return result.data as Prediction[];
   } else {
     throw new Error(result.error);
   }
@@ -35,6 +57,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const navigate = useNavigate();
 
   const [stock, setStock] = useState<Stock | null>(null);
+  const [historicalPrices, setHistoricalPrices] = useState<Price[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,10 +87,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     setLoading(true);
     setError(null);
 
-    // Fetch stock data using the symbol from URL
-    fetchStockInfo(symbol)
-      .then(data => {
-        setStock(data);
+    // Fetch all data in parallel
+    Promise.all([
+      fetchStockInfo(symbol),
+      fetchStockHistory(symbol, 15),
+      fetchStockPredictions(symbol),
+    ])
+      .then(([stockData, historyData, predictionsData]) => {
+        setStock(stockData);
+        setHistoricalPrices(historyData.reverse()); // Reverse to show oldest first
+        setPredictions(predictionsData);
         setLoading(false);
       })
       .catch(err => {
@@ -127,11 +157,26 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           {/* Right section - 2/3 of the space */}
           <section className="w-2/3 bg-bg-input rounded-component p-6">
-            <h2 className="text-xl font-semibold mb-4">Main Content</h2>
-            <p className="text-gray-300">
-              This section takes up 2/3 of the available space.
-            </p>
-            {/* Add your main content here */}
+            {loading ? (
+              <div className="flex items-center justify-center h-96 text-gray-400">
+                <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : error ? (
+              <div className="text-red-400 p-4">Error loading chart data</div>
+            ) : stock && historicalPrices.length > 0 ? (
+              <div className="h-[500px]">
+                <StockChart
+                  historicalPrices={historicalPrices}
+                  predictions={predictions}
+                  symbol={stock.symbol}
+                />
+              </div>
+            ) : (
+              <div className="text-gray-400 p-4">No chart data available</div>
+            )}
           </section>
 
         </div>

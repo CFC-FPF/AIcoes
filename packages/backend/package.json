@@ -8,9 +8,7 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "fetch-prices": "tsx src/scripts/fetchHistoricalPrices.ts",
-    "fetch-company-info": "tsx src/scripts/fetchCompanyInfo.ts",
-    "fetch-key-metrics": "tsx src/scripts/fetchKeyMetrics.ts",
-    "predict": "tsx src/scripts/runPrediction.ts"
+    "fetch-company-info": "tsx src/scripts/fetchCompanyInfo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

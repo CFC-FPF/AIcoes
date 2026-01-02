@@ -29,5 +29,8 @@
   "bugs": {
     "url": "https://github.com/CFC-FPF/AIcoes/issues"
   },
-  "homepage": "https://github.com/CFC-FPF/AIcoes#readme"
+  "homepage": "https://github.com/CFC-FPF/AIcoes#readme",
+  "dependencies": {
+    "tough-cookie": "^6.0.0"
+  }
 }

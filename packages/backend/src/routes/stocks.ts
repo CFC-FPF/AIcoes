@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase";
+import { updatePricesIfNeeded } from "../lib/priceUpdater";
 import type { Stock, Price, ApiResponse } from 'shared';
 
 const router = Router();
@@ -30,20 +31,40 @@ router.get("/:symbol", async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    const { data, error } = await supabase
+    // Get stock with latest price from view
+    const { data: priceData, error: priceError } = await supabase
       .from("v_latest_prices")
       .select("*")
       .eq("symbol", symbol.toUpperCase())
       .single();
 
-    if (error) throw error;
+    if (priceError) throw priceError;
 
-    if (!data) {
+    if (!priceData) {
       return res.status(404).json({
         success: false,
         error: "Stock not found",
       });
     }
+
+    // Get additional company info from stocks table
+    const { data: companyData, error: companyError } = await supabase
+      .from("stocks")
+      .select("ceo_name, website_url, description")
+      .eq("symbol", symbol.toUpperCase())
+      .single();
+
+    if (companyError) {
+      console.warn("Error fetching company info:", companyError.message);
+    }
+
+    // Merge the data
+    const data = {
+      ...priceData,
+      ceo_name: companyData?.ceo_name || null,
+      website_url: companyData?.website_url || null,
+      description: companyData?.description || null,
+    };
 
     res.json({ success: true, data });
   } catch (error: any) {
@@ -73,6 +94,14 @@ router.get("/:symbol/history", async (req, res) => {
         success: false,
         error: "Stock not found",
       });
+    }
+
+    // Auto-update: Verifica e atualiza dados se necessário
+    try {
+      await updatePricesIfNeeded(stock.stock_id, symbol.toUpperCase());
+    } catch (updateError: any) {
+      // Log mas não falha o request - retorna dados que existem
+      console.warn(`Failed to update prices for ${symbol}:`, updateError.message);
     }
 
     // Get price history

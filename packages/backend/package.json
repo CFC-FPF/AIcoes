@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
-    "fetch-prices": "tsx src/scripts/fetchHistoricalPrices.ts"
+    "fetch-prices": "tsx src/scripts/fetchHistoricalPrices.ts",
+    "fetch-company-info": "tsx src/scripts/fetchCompanyInfo.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
@@ -15,7 +16,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "shared": "file:../shared"
+    "shared": "file:../shared",
+    "yahoo-finance2": "^2.14.2"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",

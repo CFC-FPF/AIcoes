@@ -13,10 +13,9 @@ interface DashboardProps {
   onSearch?: (query: string) => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 async function fetchStockInfo(symbol: string) {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const response = await fetch(`${API_URL}/api/stocks/${symbol}`);
   const result = await response.json();
 

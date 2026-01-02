@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@kurkle/color": "^0.4.0",
     "@supabase/supabase-js": "^2.87.3",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",

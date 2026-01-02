@@ -109,52 +109,58 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [symbol]); // Re-fetch when symbol changes
 
   return (
-    // Full-height container with dark background
-    <div className="min-h-screen bg-[#0a1628] flex flex-col text-white">
+    // Full-height container with dark background - exactly 100vh, no scrolling
+    <div className="h-screen bg-[#0a1628] flex flex-col text-white overflow-hidden">
 
       {/* Navbar at the top */}
       <Navbar />
 
       {/* Main content area - takes remaining height */}
-      <main className="flex-1 flex justify-center px-8 py-8">
+      <main className="flex-1 flex justify-center px-8 py-8 min-h-0">
 
         {/* Container with max-width constraint, centered on page */}
-        <div className="w-full max-w-[1400px] flex gap-6">
+        <div className="w-full max-w-[1400px] flex gap-6 h-full">
 
           {/* Left section - 1/3 of the space */}
-          <aside className="w-1/3 space-y-6">
-            <DashboardSearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              onSearch={handleSearch}
-            />
+          <aside className="w-1/3 flex flex-col h-full">
+            {/* Search bar - fixed at top */}
+            <div className="flex-shrink-0 mb-6">
+              <DashboardSearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={handleSearch}
+              />
+            </div>
 
-            {loading ? (
-              <LoadingSpinner size="md" />
-            ) : error ? (
-              <ErrorMessage message={`Error: ${error}`} />
-            ) : stock ? (
-              <>
-                <CompanyInfo
-                  stock={stock}
-                  logoIcon={<AppleLogo />}
-                />
-                <MarketSentimentCard />
-                <KeyMetricsCard />
-              </>
-            ) : (
-              <div className="text-gray-400 p-4">No stock data</div>
-            )}
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto space-y-6 pr-2 min-h-0">
+              {loading ? (
+                <LoadingSpinner size="md" />
+              ) : error ? (
+                <ErrorMessage message={`Error: ${error}`} />
+              ) : stock ? (
+                <>
+                  <CompanyInfo
+                    stock={stock}
+                    logoIcon={<AppleLogo />}
+                  />
+                  <MarketSentimentCard />
+                  <KeyMetricsCard />
+                </>
+              ) : (
+                <div className="text-gray-400 p-4">No stock data</div>
+              )}
+            </div>
           </aside>
 
           {/* Right section - 2/3 of the space */}
-          <section className="w-2/3 bg-bg-input rounded-component p-6">
+          <section className="w-2/3 bg-bg-input rounded-component p-6 flex items-center justify-center h-full">
             {loading ? (
               <LoadingSpinner size="lg" />
             ) : error ? (
               <ErrorMessage message="Error loading chart data" />
             ) : stock && historicalPrices.length > 0 ? (
-              <div className="h-[500px]">
+              <div className="w-full h-[600px] max-h-full">
                 <StockChart
                   historicalPrices={historicalPrices}
                   predictions={predictions}

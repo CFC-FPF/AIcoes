@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../ui/Card';
 import CompanyHeader from '../ui/CompanyHeader';
 import InfoField from '../ui/InfoField';
@@ -15,7 +15,7 @@ interface CompanyInfoProps {
  * Displays comprehensive company details including:
  * - Company header (name, ticker, logo)
  * - Key information fields (branch, CEO, website)
- * - Company description
+ * - Company description (collapsible)
  *
  * Uses smaller UI components:
  * - Card: Basic card wrapper with consistent styling
@@ -25,8 +25,10 @@ interface CompanyInfoProps {
 const CompanyInfo: React.FC<CompanyInfoProps> = ({
   stock,
   logoUrl,
-  logoIcon  
+  logoIcon
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <Card>
       {/* Company name, ticker, and logo */}
@@ -38,7 +40,7 @@ const CompanyInfo: React.FC<CompanyInfoProps> = ({
       />
 
       {/* Information fields section */}
-      <div className="mb-6">
+      <div className="mb-4">
         {/* Branch/Industry field */}
         <InfoField
           label="Industry"
@@ -60,10 +62,33 @@ const CompanyInfo: React.FC<CompanyInfoProps> = ({
         />
       </div>
 
-      {/* Company description */}
-      <div className="text-gray-300 text-sm leading-relaxed">
-        {stock.description || 'N/A'}
-      </div>
+      {/* Collapsible description section */}
+      {stock.description && (
+        <div className="border-t border-gray-700 pt-3">
+          {/* Expand/Collapse button */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center justify-between w-full text-left text-sm text-gray-400 hover:text-white transition-colors py-2"
+          >
+            <span>Company Description</span>
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Description content - only shown when expanded */}
+          {isExpanded && (
+            <div className="text-gray-400 text-sm leading-relaxed mt-2 pt-2 border-t border-gray-700">
+              {stock.description}
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 };

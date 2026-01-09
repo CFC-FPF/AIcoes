@@ -10,6 +10,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import AppleLogo from '../../components/ui/icons/AppleLogo';
 import DashboardSearchBar from '../../components/sections/DashboardSearchBar';
+import ScrollableArea from '../../components/ui/ScrollableArea';
 
 
 interface DashboardProps {
@@ -132,24 +133,26 @@ const Dashboard: React.FC<DashboardProps> = ({
               />
             </div>
 
-            {/* Scrollable content area */}
-            <div className="flex-1 overflow-y-auto space-y-6 pr-2 min-h-0">
-              {loading ? (
-                <LoadingSpinner size="md" />
-              ) : error ? (
-                <ErrorMessage message={`Error: ${error}`} />
-              ) : stock ? (
-                <>
-                  <CompanyInfo
-                    stock={stock}
-                    logoIcon={<AppleLogo />}
-                  />
-                  <MarketSentimentCard />
-                  <KeyMetricsCard />
-                </>
-              ) : (
-                <div className="text-gray-400 p-4">No stock data</div>
-              )}
+            {/* Scrollable content area with fade indicators */}
+            <div className="flex-1 min-h-0">
+              <ScrollableArea className="space-y-6">
+                {loading ? (
+                  <LoadingSpinner size="md" />
+                ) : error ? (
+                  <ErrorMessage message={`Error: ${error}`} />
+                ) : stock ? (
+                  <>
+                    <CompanyInfo
+                      stock={stock}
+                      logoIcon={<AppleLogo />}
+                    />
+                    <MarketSentimentCard />
+                    <KeyMetricsCard />
+                  </>
+                ) : (
+                  <div className="text-gray-400 p-4">No stock data</div>
+                )}
+              </ScrollableArea>
             </div>
           </aside>
 

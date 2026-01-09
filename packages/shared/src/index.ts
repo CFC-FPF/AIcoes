@@ -9,6 +9,10 @@ export interface Stock {
   ceo_name: string | null;
   website_url: string | null;
   description: string | null;
+  market_cap: number | null;
+  pe_ratio: number | null;
+  volume: number | null;
+  week_52_high: number | null;
   created_at: string;
   updated_at: string;
 }

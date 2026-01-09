@@ -3,3 +3,7 @@ CLAUDE.md
 .env
 .env.*
 .vercel
+
+# macOS system files
+.DS_Store
+**/.DS_Store

@@ -47,10 +47,10 @@ router.get("/:symbol", async (req, res) => {
       });
     }
 
-    // Get additional company info from stocks table
+    // Get additional company info and key metrics from stocks table
     const { data: companyData, error: companyError } = await supabase
       .from("stocks")
-      .select("ceo_name, website_url, description")
+      .select("ceo_name, website_url, description, market_cap, pe_ratio, volume, week_52_high")
       .eq("symbol", symbol.toUpperCase())
       .single();
 
@@ -64,6 +64,10 @@ router.get("/:symbol", async (req, res) => {
       ceo_name: companyData?.ceo_name || null,
       website_url: companyData?.website_url || null,
       description: companyData?.description || null,
+      market_cap: companyData?.market_cap || null,
+      pe_ratio: companyData?.pe_ratio || null,
+      volume: companyData?.volume || null,
+      week_52_high: companyData?.week_52_high || null,
     };
 
     res.json({ success: true, data });

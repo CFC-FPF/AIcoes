@@ -43,43 +43,39 @@ const StockChart: React.FC<StockChartProps> = ({
   );
   const historicalPricesData = historicalPrices.map(p => p.close_price);
 
-  // Prepare prediction data (using dummy data for now)
-  const dummyPredictions = historicalPrices.length > 0 ? [
-    historicalPricesData[historicalPricesData.length - 1] * 1.01,
-    historicalPricesData[historicalPricesData.length - 1] * 1.015,
-    historicalPricesData[historicalPricesData.length - 1] * 1.025,
-    historicalPricesData[historicalPricesData.length - 1] * 1.032,
-    historicalPricesData[historicalPricesData.length - 1] * 1.037,
-  ] : [];
+  // Prepare prediction data from real predictions
+  const predictionPrices = predictions.map(p => p.predicted_close_price);
 
-  const predictionDates = dummyPredictions.map((_, idx) => {
-    const lastDate = historicalPrices.length > 0
-      ? new Date(historicalPrices[historicalPrices.length - 1].trade_date)
-      : new Date();
-    const futureDate = new Date(lastDate);
-    futureDate.setDate(futureDate.getDate() + idx + 1);
-    return futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  });
+  const predictionDates = predictions.map(p =>
+    new Date(p.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  );
 
   // Combine dates for x-axis
   const allDates = [...historicalDates, ...predictionDates];
 
-  // Calculate dummy metrics
+  // Calculate metrics from real data
   const currentPrice = historicalPricesData.length > 0
     ? historicalPricesData[historicalPricesData.length - 1]
-    : 0;
-  const firstPrice = historicalPricesData.length > 0 ? historicalPricesData[0] : 0;
-  const currentPriceChange = firstPrice > 0
+    : null;
+  const firstPrice = historicalPricesData.length > 0 ? historicalPricesData[0] : null;
+  const currentPriceChange = (currentPrice && firstPrice && firstPrice > 0)
     ? ((currentPrice - firstPrice) / firstPrice * 100)
-    : 0;
+    : null;
 
-  const predictedPrice = dummyPredictions.length > 0 ? dummyPredictions[4] : 0;
-  const predictedPriceChange = currentPrice > 0
+  // Get the last prediction (furthest in the future)
+  const lastPrediction = predictions.length > 0 ? predictions[predictions.length - 1] : null;
+  const predictedPrice = lastPrediction?.predicted_close_price ?? null;
+  const predictedPriceChange = (currentPrice && predictedPrice)
     ? ((predictedPrice - currentPrice) / currentPrice * 100)
-    : 0;
+    : null;
 
-  const confidenceScore = 87; // Dummy data
-  const confidenceLevel = confidenceScore > 80 ? 'High' : confidenceScore > 50 ? 'Medium' : 'Low';
+  // Get average confidence score from predictions
+  const confidenceScore = predictions.length > 0
+    ? predictions.reduce((sum, p) => sum + (p.confidence_score || 0), 0) / predictions.length
+    : null;
+  const confidenceLevel = confidenceScore !== null
+    ? (confidenceScore > 80 ? 'High' : confidenceScore > 50 ? 'Medium' : 'Low')
+    : null;
 
   // Prepare datasets with gradient
   const data = {
@@ -87,7 +83,7 @@ const StockChart: React.FC<StockChartProps> = ({
     datasets: [
       {
         label: 'Historical',
-        data: [...historicalPricesData, ...Array(dummyPredictions.length).fill(null)],
+        data: [...historicalPricesData, ...Array(predictionPrices.length).fill(null)],
         borderColor: 'rgb(139, 92, 246)', // purple
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -104,7 +100,7 @@ const StockChart: React.FC<StockChartProps> = ({
       },
       {
         label: 'Predicted',
-        data: [...Array(historicalPrices.length - 1).fill(null), historicalPricesData[historicalPricesData.length - 1], ...dummyPredictions],
+        data: [...Array(historicalPrices.length - 1).fill(null), historicalPricesData[historicalPricesData.length - 1], ...predictionPrices],
         borderColor: 'rgb(96, 165, 250)', // lighter blue
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -210,7 +206,7 @@ const StockChart: React.FC<StockChartProps> = ({
             Stock Price Analysis & Prediction
           </h2>
           <p className="text-sm text-gray-400">
-            {historicalPrices.length} days historical data + {dummyPredictions.length} days AI prediction
+            {historicalPrices.length} days historical data + {predictionPrices.length} days AI prediction
           </p>
         </div>
 
@@ -243,26 +239,30 @@ const StockChart: React.FC<StockChartProps> = ({
             </svg>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            ${currentPrice.toFixed(2)}
+            {currentPrice !== null ? `$${currentPrice.toFixed(2)}` : 'N/A'}
           </div>
-          <div className={`text-sm font-medium ${currentPriceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {currentPriceChange >= 0 ? '↑' : '↓'} {Math.abs(currentPriceChange).toFixed(1)}%
+          <div className={`text-sm font-medium ${currentPriceChange !== null && currentPriceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {currentPriceChange !== null
+              ? `${currentPriceChange >= 0 ? '↑' : '↓'} ${Math.abs(currentPriceChange).toFixed(1)}%`
+              : 'N/A'}
           </div>
         </div>
 
         {/* Predicted Price Card */}
         <div className="bg-[#0f1e33] rounded-lg p-4 border border-gray-700/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">Predicted (Day 5)</span>
+            <span className="text-sm text-gray-400">Predicted (Day {predictions.length || 'N/A'})</span>
             <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            ${predictedPrice.toFixed(2)}
+            {predictedPrice !== null ? `$${predictedPrice.toFixed(2)}` : 'N/A'}
           </div>
-          <div className={`text-sm font-medium ${predictedPriceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {predictedPriceChange >= 0 ? '↑' : '↓'} {Math.abs(predictedPriceChange).toFixed(1)}%
+          <div className={`text-sm font-medium ${predictedPriceChange !== null && predictedPriceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {predictedPriceChange !== null
+              ? `${predictedPriceChange >= 0 ? '↑' : '↓'} ${Math.abs(predictedPriceChange).toFixed(1)}%`
+              : 'N/A'}
           </div>
         </div>
 
@@ -275,10 +275,10 @@ const StockChart: React.FC<StockChartProps> = ({
             </svg>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            {confidenceScore}%
+            {confidenceScore !== null ? `${confidenceScore.toFixed(0)}%` : 'N/A'}
           </div>
-          <div className="text-sm font-medium text-green-400">
-            {confidenceLevel}
+          <div className={`text-sm font-medium ${confidenceLevel ? 'text-green-400' : 'text-gray-400'}`}>
+            {confidenceLevel || 'N/A'}
           </div>
         </div>
       </div>

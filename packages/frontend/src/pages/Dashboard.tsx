@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       logoIcon={<AppleLogo />}
                     />
                     <MarketSentimentCard />
-                    <KeyMetricsCard />
+                    <KeyMetricsCard stock={stock} />
                   </>
                 ) : (
                   <div className="text-gray-400 p-4">No stock data</div>

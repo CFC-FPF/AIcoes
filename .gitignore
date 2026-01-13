@@ -7,3 +7,6 @@ CLAUDE.md
 # macOS system files
 .DS_Store
 **/.DS_Store
+
+# ml files
+packages/ml/venv/

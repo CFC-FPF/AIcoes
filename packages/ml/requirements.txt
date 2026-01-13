@@ -1,0 +1,5 @@
+scikit-learn==1.4.0
+pandas==2.2.0
+numpy==1.26.3
+supabase==2.4.0
+python-dotenv==1.0.0

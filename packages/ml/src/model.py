@@ -1,93 +1,97 @@
 # model.py - Time series forecasting model for stock prices
 # This script takes historical price data and predicts future prices.
+#
+# KEY INSIGHT: We predict PRICE CHANGES (returns), not absolute prices.
+# This prevents the model from just saying "tomorrow = today".
+#
+# MODEL: Random Forest - captures non-linear patterns better than Ridge.
 
 # ============================================================================
 # IMPORTS
 # ============================================================================
 
-import numpy as np                          # Math operations on arrays
-import pandas as pd                         # Data manipulation (like spreadsheets)
-from sklearn.linear_model import Ridge      # Our ML model (improved linear regression)
-from datetime import datetime, timedelta    # Date calculations
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from datetime import datetime, timedelta
 
 
 # ============================================================================
-# FEATURE ENGINEERING - Creating "clues" for the model
+# FEATURE ENGINEERING
 # ============================================================================
 
 def create_features(prices_df):
     """
-    Transform raw price data into features the model can learn from.
-    
-    Raw data: Just closing prices
-    Features: Patterns and trends derived from those prices
-    
-    Args:
-        prices_df: DataFrame with 'date' and 'close' columns
-    
-    Returns:
-        DataFrame with additional feature columns
+    Create features for predicting NEXT DAY'S RETURN (% change).
+
+    Random Forest can handle more features without overfitting,
+    so we include a richer feature set.
     """
     df = prices_df.copy()
-    
-    # -------------------------------------------------------------------------
-    # LAG FEATURES - "What was the price X days ago?"
-    # -------------------------------------------------------------------------
-    # These help the model see recent history.
-    # shift(1) moves the data down by 1 row, so each row now has yesterday's price.
-    #
-    # Example:
-    #   date       | close | lag_1 | lag_5
-    #   Jan 5      | 100   | NaN   | NaN    ← Not enough history yet
-    #   Jan 6      | 101   | 100   | NaN
-    #   Jan 7      | 102   | 101   | NaN
-    #   ...
-    #   Jan 10     | 105   | 104   | 100    ← Now we have 5 days of history
-    
-    df['lag_1'] = df['close'].shift(1)    # Yesterday's price
-    df['lag_2'] = df['close'].shift(2)    # 2 days ago
-    df['lag_3'] = df['close'].shift(3)    # 3 days ago
-    df['lag_5'] = df['close'].shift(5)    # 5 days ago
-    df['lag_10'] = df['close'].shift(10)  # 10 days ago
-    
-    # -------------------------------------------------------------------------
-    # ROLLING AVERAGES - "What's the average over recent days?"
-    # -------------------------------------------------------------------------
-    # These smooth out daily noise and show trends.
-    # rolling(5).mean() = average of the last 5 values
-    #
-    # If prices are: [100, 102, 104, 103, 105]
-    # Rolling 5-day average = (100+102+104+103+105)/5 = 102.8
-    
-    df['rolling_mean_5'] = df['close'].rolling(window=5).mean()   # 5-day average
-    df['rolling_mean_10'] = df['close'].rolling(window=10).mean() # 10-day average
-    
-    # -------------------------------------------------------------------------
-    # VOLATILITY - "How much is the price jumping around?"
-    # -------------------------------------------------------------------------
-    # Standard deviation measures how spread out the values are.
-    # High volatility = big price swings
-    # Low volatility = stable prices
-    
-    df['rolling_std_5'] = df['close'].rolling(window=5).std()  # 5-day volatility
-    
-    # -------------------------------------------------------------------------
-    # MOMENTUM - "Is the price going up or down?"
-    # -------------------------------------------------------------------------
-    # Price change from X days ago to today
-    # Positive = price went up, Negative = price went down
-    
-    df['momentum_5'] = df['close'] - df['close'].shift(5)   # Change over 5 days
-    df['momentum_10'] = df['close'] - df['close'].shift(10) # Change over 10 days
-    
-    # -------------------------------------------------------------------------
-    # DAILY CHANGE - "How much did price change today?"
-    # -------------------------------------------------------------------------
-    # Percentage change from yesterday
-    # pct_change() calculates: (today - yesterday) / yesterday
-    
-    df['daily_return'] = df['close'].pct_change()  # % change from yesterday
-    
+
+    # Target: Next day's return (what we're trying to predict)
+    # shift(-1) looks at TOMORROW's value
+    df['target_return'] = df['close'].pct_change().shift(-1)
+
+    # === PRICE-BASED FEATURES ===
+
+    # Recent returns (momentum signals)
+    df['return_1d'] = df['close'].pct_change()          # Today's return
+    df['return_2d'] = df['close'].pct_change(2)         # 2-day return
+    df['return_3d'] = df['close'].pct_change(3)         # 3-day return
+    df['return_5d'] = df['close'].pct_change(5)         # 5-day return (weekly)
+    df['return_10d'] = df['close'].pct_change(10)       # 10-day return
+
+    # Moving average crossovers (trend signals)
+    df['sma_5'] = df['close'].rolling(5).mean()
+    df['sma_10'] = df['close'].rolling(10).mean()
+    df['sma_20'] = df['close'].rolling(20).mean()
+
+    # Price relative to moving averages (mean reversion signals)
+    df['price_vs_sma5'] = (df['close'] - df['sma_5']) / df['sma_5']
+    df['price_vs_sma10'] = (df['close'] - df['sma_10']) / df['sma_10']
+    df['price_vs_sma20'] = (df['close'] - df['sma_20']) / df['sma_20']
+
+    # SMA crossover signals
+    df['sma5_vs_sma10'] = (df['sma_5'] - df['sma_10']) / df['sma_10']
+    df['sma5_vs_sma20'] = (df['sma_5'] - df['sma_20']) / df['sma_20']
+    df['sma10_vs_sma20'] = (df['sma_10'] - df['sma_20']) / df['sma_20']
+
+    # === VOLATILITY FEATURES ===
+
+    df['volatility_5d'] = df['return_1d'].rolling(5).std()
+    df['volatility_10d'] = df['return_1d'].rolling(10).std()
+    df['volatility_20d'] = df['return_1d'].rolling(20).std()
+
+    # Volatility ratio (recent vs longer-term)
+    df['vol_ratio_5_20'] = df['volatility_5d'] / df['volatility_20d']
+
+    # === VOLUME FEATURES (if available) ===
+
+    if 'volume' in df.columns:
+        df['volume_sma5'] = df['volume'].rolling(5).mean()
+        df['volume_sma10'] = df['volume'].rolling(10).mean()
+        df['volume_ratio_5'] = df['volume'] / df['volume_sma5']
+        df['volume_ratio_10'] = df['volume'] / df['volume_sma10']
+        # Volume trend
+        df['volume_change'] = df['volume'].pct_change()
+
+    # === HIGH/LOW FEATURES (if available) ===
+
+    if 'high' in df.columns and 'low' in df.columns:
+        df['daily_range'] = (df['high'] - df['low']) / df['close']
+        df['avg_range_5d'] = df['daily_range'].rolling(5).mean()
+        df['avg_range_10d'] = df['daily_range'].rolling(10).mean()
+
+        # Where did price close within the day's range?
+        df['close_position'] = (df['close'] - df['low']) / (df['high'] - df['low'])
+        df['close_position'] = df['close_position'].fillna(0.5)
+
+    # === LAGGED RETURNS (patterns from recent days) ===
+
+    for lag in [1, 2, 3, 5]:
+        df[f'return_lag_{lag}'] = df['return_1d'].shift(lag)
+
     return df
 
 
@@ -97,155 +101,203 @@ def create_features(prices_df):
 
 def predict_prices(historical_data, days_to_predict=5):
     """
-    Train a model on historical data and predict future prices.
-    
-    Args:
-        historical_data: List of dicts with 'date' and 'close' keys
-                        [{"date": "2025-01-01", "close": 150.0}, ...]
-        days_to_predict: How many days into the future to predict (default: 5)
-    
-    Returns:
-        List of predictions: [{"date": "2025-01-09", "predicted_close": 155.0, "confidence": 0.75}, ...]
+    Train a Random Forest model on historical data and predict future prices.
+
+    This model predicts DAILY RETURNS (% changes), then converts to prices.
+    Random Forest captures non-linear patterns and provides realistic uncertainty.
     """
-    
+
     # -------------------------------------------------------------------------
-    # STEP 1: Convert to DataFrame
+    # STEP 1: Prepare DataFrame
     # -------------------------------------------------------------------------
-    # pandas DataFrame is like a spreadsheet - rows and columns
-    # This makes it easier to manipulate the data
-    
+
     df = pd.DataFrame(historical_data)
-    df['date'] = pd.to_datetime(df['date'])  # Convert string dates to date objects
-    df = df.sort_values('date')               # Ensure oldest first
-    
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
+
     # -------------------------------------------------------------------------
     # STEP 2: Create features
     # -------------------------------------------------------------------------
-    # Add all our "clues" (lag features, rolling averages, etc.)
-    
+
     df = create_features(df)
-    
+
     # -------------------------------------------------------------------------
-    # STEP 3: Remove rows with NaN values
+    # STEP 3: Define feature columns (only use features that exist)
     # -------------------------------------------------------------------------
-    # The first ~10 rows won't have all features (not enough history)
-    # We drop these because the model can't learn from incomplete data
-    
-    df_clean = df.dropna()
-    
-    # Check if we have enough data
-    if len(df_clean) < 20:
-        return {"error": "Not enough historical data to make predictions"}
-    
-    # -------------------------------------------------------------------------
-    # STEP 4: Prepare training data
-    # -------------------------------------------------------------------------
-    # X = features (the inputs/clues)
-    # y = target (what we're trying to predict - the closing price)
-    #
-    # We're predicting: "Given these features, what will the price be?"
-    
+
     feature_columns = [
-        'lag_1', 'lag_2', 'lag_3', 'lag_5', 'lag_10',
-        'rolling_mean_5', 'rolling_mean_10',
-        'rolling_std_5',
-        'momentum_5', 'momentum_10',
-        'daily_return'
+        'return_1d', 'return_2d', 'return_3d', 'return_5d', 'return_10d',
+        'price_vs_sma5', 'price_vs_sma10', 'price_vs_sma20',
+        'sma5_vs_sma10', 'sma5_vs_sma20', 'sma10_vs_sma20',
+        'volatility_5d', 'volatility_10d', 'volatility_20d',
+        'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_5'
     ]
-    
-    X = df_clean[feature_columns]  # Features (11 columns)
-    y = df_clean['close']          # Target (1 column - the price)
-    
+
+    # Add optional features if they exist
+    if 'volume_ratio_5' in df.columns:
+        feature_columns.extend(['volume_ratio_5', 'volume_ratio_10', 'volume_change'])
+    if 'daily_range' in df.columns:
+        feature_columns.extend(['daily_range', 'avg_range_5d', 'avg_range_10d', 'close_position'])
+    if 'vol_ratio_5_20' in df.columns:
+        feature_columns.append('vol_ratio_5_20')
+
     # -------------------------------------------------------------------------
-    # STEP 5: Train the model
+    # STEP 4: Clean data and prepare training set
     # -------------------------------------------------------------------------
-    # Ridge regression is linear regression with "regularization"
-    # Regularization prevents the model from overfitting (memorizing instead of learning)
-    # alpha=1.0 controls how much regularization to apply
-    
-    model = Ridge(alpha=1.0)
-    model.fit(X, y)  # "fit" = "train" = "learn from this data"
-    
+
+    # Remove rows with NaN (need ~20 days of history for all features)
+    df_clean = df.dropna(subset=feature_columns + ['target_return'])
+
+    if len(df_clean) < 30:
+        return {"error": f"Not enough data. Need 30+ rows, got {len(df_clean)}"}
+
+    X = df_clean[feature_columns]
+    y = df_clean['target_return']
+
     # -------------------------------------------------------------------------
-    # STEP 6: Calculate confidence score
+    # STEP 5: Train Random Forest model
     # -------------------------------------------------------------------------
-    # R² score measures how well the model fits the data
-    # 1.0 = perfect fit, 0.0 = no better than guessing the average
-    # We use this as our "confidence" metric
-    
-    r2_score = model.score(X, y)
-    confidence = max(0.0, min(1.0, r2_score))  # Clamp between 0 and 1
-    
+
+    # Random Forest parameters tuned for stock prediction:
+    # - n_estimators=100: Good balance of accuracy vs speed
+    # - max_depth=10: Prevent overfitting on small datasets
+    # - min_samples_leaf=5: Require at least 5 samples per leaf
+    # - oob_score=True: Out-of-bag score for realistic confidence
+    model = RandomForestRegressor(
+        n_estimators=100,
+        max_depth=10,
+        min_samples_leaf=5,
+        min_samples_split=10,
+        oob_score=True,
+        random_state=42,
+        n_jobs=-1  # Use all CPU cores
+    )
+
+    model.fit(X, y)
+
+    # Out-of-bag R² score (realistic measure of predictive power)
+    # This tests predictions on samples not used in each tree
+    oob_r2 = model.oob_score_
+
+    # Stock prediction R² is typically 0.01-0.15, rarely above 0.20
+    # Scale to a user-friendly confidence display (40%-85%)
+    # oob_r2 of 0.05 → ~55% confidence, 0.15 → ~70% confidence
+    display_confidence = min(0.85, max(0.40, 0.50 + oob_r2 * 2.5))
+
     # -------------------------------------------------------------------------
-    # STEP 7: Generate predictions for future days
+    # STEP 6: Generate predictions with uncertainty
     # -------------------------------------------------------------------------
-    # We predict one day at a time, then use that prediction
-    # to help predict the next day (recursive prediction)
-    
+
     predictions = []
-    last_date = df['date'].iloc[-1]          # Most recent date in our data
-    current_data = df.copy()                  # Working copy of our data
-    
+    last_price = df['close'].iloc[-1]
+
+    # Start from TODAY, not from last historical date
+    # This ensures predictions are always in the future
+    today = datetime.now().date()
+
+    # Get the most recent features for prediction
+    current_df = df.copy()
+
+    # Historical volatility for adding realistic noise
+    hist_volatility = df['return_1d'].std()
+
+    # Track the last prediction date for sequential business days
+    last_pred_date = today
+
     for i in range(days_to_predict):
-        # Calculate the next business day (skip weekends)
-        next_date = last_date + timedelta(days=1)
-        while next_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        # Find the next business day after the last prediction date
+        next_date = last_pred_date + timedelta(days=1)
+        while next_date.weekday() >= 5:  # Skip weekends (5=Sat, 6=Sun)
             next_date += timedelta(days=1)
-        
-        # Create features for prediction
-        # We need to recalculate features because we added a new row
-        current_features = create_features(current_data)
-        latest_features = current_features[feature_columns].iloc[-1:]
-        
-        # Make prediction
-        predicted_price = model.predict(latest_features)[0]
-        
-        # Store the prediction
+
+        # Get latest features
+        current_df = create_features(current_df)
+        latest_row = current_df.iloc[-1:]
+
+        # Check if we have all features
+        if latest_row[feature_columns].isna().any().any():
+            # Use average historical return if features are missing
+            predicted_return = df['return_1d'].mean()
+        else:
+            # Get predictions from all trees in the forest
+            # This gives us a distribution of predictions
+            tree_predictions = np.array([
+                tree.predict(latest_row[feature_columns].values)[0]
+                for tree in model.estimators_
+            ])
+
+            # Use median (more robust than mean for financial data)
+            predicted_return = np.median(tree_predictions)
+
+            # Add noise based on tree disagreement (uncertainty)
+            tree_std = np.std(tree_predictions)
+            noise = np.random.normal(0, tree_std * 0.5)
+            predicted_return = predicted_return + noise
+
+        # Clamp return to realistic range (-5% to +5% daily)
+        predicted_return = max(-0.05, min(0.05, predicted_return))
+
+        # Convert return to price
+        predicted_price = last_price * (1 + predicted_return)
+
+        # Confidence decreases for predictions further in the future
+        day_confidence = display_confidence * (1 - i * 0.03)  # ~3% decrease per day
+
         predictions.append({
             "target_date": next_date.strftime("%Y-%m-%d"),
             "predicted_close": round(float(predicted_price), 2),
-            "confidence": round(confidence, 4)
+            "confidence": round(day_confidence, 2)
         })
-        
-        # Add this prediction to our data for the next iteration
+
+        # Update for next iteration
         new_row = pd.DataFrame([{
             'date': next_date,
             'close': predicted_price,
             'open': predicted_price,
-            'high': predicted_price,
-            'low': predicted_price,
-            'volume': 0
+            'high': predicted_price * (1 + abs(predicted_return) * 0.5),
+            'low': predicted_price * (1 - abs(predicted_return) * 0.5),
+            'volume': current_df['volume'].iloc[-1] if 'volume' in current_df.columns else 0
         }])
-        current_data = pd.concat([current_data, new_row], ignore_index=True)
-        last_date = next_date
-    
+        current_df = pd.concat([current_df, new_row], ignore_index=True)
+        last_pred_date = next_date
+        last_price = predicted_price
+
     return predictions
 
 
 # ============================================================================
-# TEST - Run this file directly to test the model
+# TEST
 # ============================================================================
 
 if __name__ == "__main__":
-    # Create some fake data to test
     import json
-    
+
+    # Create realistic test data with trend and noise
+    np.random.seed(42)
     test_data = []
-    base_price = 150.0
-    for i in range(60):
-        # Simulate a stock with slight upward trend and randomness
-        date = datetime(2024, 11, 1) + timedelta(days=i)
+    price = 150.0
+
+    for i in range(90):
+        date = datetime(2024, 10, 1) + timedelta(days=i)
         if date.weekday() < 5:  # Skip weekends
-            price = base_price + (i * 0.5) + np.random.randn() * 2
+            # Random walk with slight upward drift
+            daily_return = np.random.normal(0.001, 0.015)  # 0.1% drift, 1.5% volatility
+            price = price * (1 + daily_return)
             test_data.append({
                 "date": date.strftime("%Y-%m-%d"),
-                "close": round(price, 2)
+                "open": round(price * 0.998, 2),
+                "high": round(price * 1.01, 2),
+                "low": round(price * 0.99, 2),
+                "close": round(price, 2),
+                "volume": int(np.random.uniform(1000000, 5000000))
             })
-    
-    print("Testing model with fake data...")
+
+    print("Testing Random Forest model with fake data...")
     print(f"Input: {len(test_data)} days of price history")
+    print(f"Price range: ${min(d['close'] for d in test_data):.2f} - ${max(d['close'] for d in test_data):.2f}")
+    print(f"Latest price: ${test_data[-1]['close']:.2f}")
     print()
-    
+
     result = predict_prices(test_data, days_to_predict=5)
     print("Predictions:")
     print(json.dumps(result, indent=2))

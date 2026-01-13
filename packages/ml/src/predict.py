@@ -50,7 +50,7 @@ def generate_predictions(symbol: str, days_to_predict: int = 5):
     # Step 3: Return results with metadata
     return {
         "symbol": symbol,
-        "model_version": "ridge_v1",
+        "model_version": "random_forest_v1",
         "historical_days_used": len(historical_data),
         "predictions": predictions
     }

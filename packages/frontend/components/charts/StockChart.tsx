@@ -43,28 +43,24 @@ const StockChart: React.FC<StockChartProps> = ({
   );
   const historicalPricesData = historicalPrices.map(p => p.close_price);
 
-  // Prepare prediction data (using dummy data for now)
-  const dummyPredictions = historicalPrices.length > 0 ? [
-    historicalPricesData[historicalPricesData.length - 1] * 1.01,
-    historicalPricesData[historicalPricesData.length - 1] * 1.015,
-    historicalPricesData[historicalPricesData.length - 1] * 1.025,
-    historicalPricesData[historicalPricesData.length - 1] * 1.032,
-    historicalPricesData[historicalPricesData.length - 1] * 1.037,
-  ] : [];
+  // Prepare prediction data from actual predictions prop
+  const predictionPrices = predictions.map(p => p.predicted_close_price);
+  const predictionDates = predictions.map(p =>
+    new Date(p.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  );
 
-  const predictionDates = dummyPredictions.map((_, idx) => {
-    const lastDate = historicalPrices.length > 0
-      ? new Date(historicalPrices[historicalPrices.length - 1].trade_date)
-      : new Date();
-    const futureDate = new Date(lastDate);
-    futureDate.setDate(futureDate.getDate() + idx + 1);
-    return futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  });
+  // Get average confidence score from predictions
+  const avgConfidence = predictions.length > 0
+    ? predictions.reduce((sum, p) => sum + (p.confidence_score || 0), 0) / predictions.length
+    : 0;
 
   // Combine dates for x-axis
-  const allDates = [...historicalDates, ...predictionDates];
+  // Add "Today" as a bridge label between historical and predictions
+  // This prevents the visual gap when historical data ends (e.g., Dec 31) and predictions start (e.g., Jan 14)
+  const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const allDates = [...historicalDates, todayLabel, ...predictionDates];
 
-  // Calculate dummy metrics
+  // Calculate metrics using real data
   const currentPrice = historicalPricesData.length > 0
     ? historicalPricesData[historicalPricesData.length - 1]
     : 0;
@@ -73,21 +69,30 @@ const StockChart: React.FC<StockChartProps> = ({
     ? ((currentPrice - firstPrice) / firstPrice * 100)
     : 0;
 
-  const predictedPrice = dummyPredictions.length > 0 ? dummyPredictions[4] : 0;
+  // Use last prediction price (day 5) from actual predictions
+  const predictedPrice = predictionPrices.length > 0 ? predictionPrices[predictionPrices.length - 1] : 0;
   const predictedPriceChange = currentPrice > 0
     ? ((predictedPrice - currentPrice) / currentPrice * 100)
     : 0;
 
-  const confidenceScore = 87; // Dummy data
-  const confidenceLevel = confidenceScore > 80 ? 'High' : confidenceScore > 50 ? 'Medium' : 'Low';
+  // Use average confidence from actual predictions (convert from 0-1 to percentage)
+  const confidenceScore = Math.round(avgConfidence * 100);
+  const confidenceLevel = confidenceScore > 60 ? 'High' : confidenceScore > 40 ? 'Medium' : 'Low';
+
+  // For smooth connection: create a single combined line that changes color
+  // Historical ends at last price, prediction starts from that same point
+  const lastHistPrice = historicalPricesData[historicalPricesData.length - 1];
 
   // Prepare datasets with gradient
+  // Note: allDates = [...historicalDates, todayLabel, ...predictionDates]
+  // So we need: historical data points + 1 for "Today" bridge + prediction points
   const data = {
     labels: allDates,
     datasets: [
       {
         label: 'Historical',
-        data: [...historicalPricesData, ...Array(dummyPredictions.length).fill(null)],
+        // Historical data + lastHistPrice at "Today" position + nulls for prediction dates
+        data: [...historicalPricesData, lastHistPrice, ...Array(predictionPrices.length).fill(null)],
         borderColor: 'rgb(139, 92, 246)', // purple
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -104,7 +109,8 @@ const StockChart: React.FC<StockChartProps> = ({
       },
       {
         label: 'Predicted',
-        data: [...Array(historicalPrices.length - 1).fill(null), historicalPricesData[historicalPricesData.length - 1], ...dummyPredictions],
+        // Nulls for historical + lastHistPrice at "Today" position (bridge) + predictions
+        data: [...Array(historicalPrices.length).fill(null), lastHistPrice, ...predictionPrices],
         borderColor: 'rgb(96, 165, 250)', // lighter blue
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -114,7 +120,7 @@ const StockChart: React.FC<StockChartProps> = ({
           return gradient;
         },
         fill: true,
-        tension: 0.4,
+        tension: 0.4, // Same tension for smooth curve continuity
         pointRadius: 0,
         pointHoverRadius: 5,
         borderWidth: 2,
@@ -210,7 +216,7 @@ const StockChart: React.FC<StockChartProps> = ({
             Stock Price Analysis & Prediction
           </h2>
           <p className="text-sm text-gray-400">
-            {historicalPrices.length} days historical data + {dummyPredictions.length} days AI prediction
+            {historicalPrices.length} days historical data + {predictions.length} days AI prediction
           </p>
         </div>
 

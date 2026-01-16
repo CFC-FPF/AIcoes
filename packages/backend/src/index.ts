@@ -1,6 +1,10 @@
 // PRIMEIRO: carrega dotenv ANTES de qualquer outro import
 import dotenv from 'dotenv';
 import path from 'path';
+import sentiment from "./routes/sentiment";
+
+
+
 const envPath = path.resolve(__dirname, '..', '.env');
 const result = dotenv.config({ path: envPath });
 
@@ -37,6 +41,7 @@ async function startServer() {
   const { testConnection } = await import('./lib/supabase.js');
   
   app.use('/api/stocks', stocksRouter);
+  
   
   await testConnection();
   

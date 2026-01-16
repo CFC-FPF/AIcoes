@@ -65,8 +65,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [searchQuery, setSearchQuery] = useState('');
+  const [sentiments, setSentiments] = useState([]);
 
   const handleSearch = () => {
     if (onSearch) {
@@ -77,7 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  
+
 
   useEffect(() => {
     // Don't fetch if no symbol in URL
@@ -85,6 +85,13 @@ const Dashboard: React.FC<DashboardProps> = ({
       setError('No stock symbol provided');
       setLoading(false);
       return;
+    }
+
+    if (stock?.symbol) {
+      fetch(`${import.meta.env.VITE_API_URL}/api/sentiment/${stock.symbol}`)
+        .then(r => r.json())
+        .then(data => setSentiments(data.sentiments || []))
+        .catch(err => console.error("Failed to fetch sentiment:", err));
     }
 
     // Reset states when symbol changes
@@ -146,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       stock={stock}
                       logoIcon={<AppleLogo />}
                     />
-                    <MarketSentimentCard />
+                    <MarketSentimentCard sentiments={sentiments} />
                     <KeyMetricsCard />
                   </>
                 ) : (

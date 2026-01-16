@@ -52,6 +52,7 @@ export async function needsPriceUpdate(stockId: number): Promise<boolean> {
 
 /**
  * Busca dados históricos do Yahoo Finance para um período específico
+ * Uses historical() API for better reliability
  */
 async function fetchYahooFinanceRange(
   symbol: string,
@@ -59,9 +60,9 @@ async function fetchYahooFinanceRange(
   endDate: Date
 ): Promise<YahooQuote[]> {
   try {
-    const result: any = await yahooFinance.historical(symbol, {
-      period1: startDate.toISOString().split("T")[0],
-      period2: endDate.toISOString().split("T")[0],
+    const result = await yahooFinance.historical(symbol, {
+      period1: startDate,
+      period2: endDate,
       interval: "1d",
     });
 
@@ -82,7 +83,7 @@ async function fetchYahooFinanceRange(
     // Filter out null/undefined values
     return quotes.filter((d) => d.open && d.high && d.low && d.close);
   } catch (error: any) {
-    console.error(`Error fetching ${symbol} from Yahoo Finance:`, error.message);
+    console.error(`Error fetching ${symbol} from Yahoo Finance:`, error.message || error);
     return [];
   }
 }

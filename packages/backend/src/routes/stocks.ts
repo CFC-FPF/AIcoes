@@ -98,10 +98,12 @@ router.get("/:symbol/history", async (req, res) => {
 
     // Auto-update: Verifica e atualiza dados se necessário
     try {
+      console.log(`📡 [${symbol.toUpperCase()}] Checking if price update needed...`);
       await updatePricesIfNeeded(stock.stock_id, symbol.toUpperCase());
     } catch (updateError: any) {
       // Log mas não falha o request - retorna dados que existem
-      console.warn(`Failed to update prices for ${symbol}:`, updateError.message);
+      console.error(`❌ Failed to update prices for ${symbol}:`, updateError.message);
+      console.error(updateError.stack);
     }
 
     // Get price history

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase";
 import { updatePricesIfNeeded } from "../lib/priceUpdater";
+import { updatePredictionsIfNeeded } from "../lib/predictionUpdater";
 import type { Stock, Price, ApiResponse } from 'shared';
 
 const router = Router();
@@ -130,6 +131,28 @@ router.get("/:symbol/history", async (req, res) => {
 router.get("/:symbol/predictions", async (req, res) => {
   try {
     const { symbol } = req.params;
+
+    // Get stock_id first
+    const { data: stock } = await supabase
+      .from("stocks")
+      .select("stock_id")
+      .eq("symbol", symbol.toUpperCase())
+      .single();
+
+    if (!stock) {
+      return res.status(404).json({
+        success: false,
+        error: "Stock not found",
+      });
+    }
+
+    // Auto-update predictions if stale (not generated today)
+    try {
+      await updatePredictionsIfNeeded(stock.stock_id, symbol.toUpperCase());
+    } catch (updateError: any) {
+      // Log but don't fail - return existing predictions if available
+      console.error(`❌ Failed to update predictions for ${symbol}:`, updateError.message);
+    }
 
     const { data, error } = await supabase
       .from("v_active_predictions")

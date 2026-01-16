@@ -10,8 +10,8 @@ import {
   Tooltip,
   Legend,
   Filler,
-  ChartOptions,
 } from 'chart.js';
+import type { ChartOptions } from 'chart.js';
 import type { Price, Prediction } from '../../../shared/src/index';
 
 // Register Chart.js components
@@ -35,7 +35,7 @@ interface StockChartProps {
 const StockChart: React.FC<StockChartProps> = ({
   historicalPrices,
   predictions = [],
-  symbol,
+  symbol: _symbol,
 }) => {
   // Prepare historical data
   const historicalDates = historicalPrices.map(p =>
@@ -55,10 +55,14 @@ const StockChart: React.FC<StockChartProps> = ({
     : 0;
 
   // Combine dates for x-axis
-  // Add "Today" as a bridge label between historical and predictions
-  // This prevents the visual gap when historical data ends (e.g., Dec 31) and predictions start (e.g., Jan 14)
-  const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const allDates = [...historicalDates, todayLabel, ...predictionDates];
+  // Get the last historical date to avoid duplication with prediction dates
+  const lastHistDate = historicalDates[historicalDates.length - 1];
+  // Filter out any prediction dates that match the last historical date
+  const filteredPredictionDates = predictionDates.filter(d => d !== lastHistDate);
+  const filteredPredictionPrices = predictionDates[0] === lastHistDate
+    ? predictionPrices.slice(1)
+    : predictionPrices;
+  const allDates = [...historicalDates, ...filteredPredictionDates];
 
   // Calculate metrics using real data
   const currentPrice = historicalPricesData.length > 0
@@ -79,20 +83,18 @@ const StockChart: React.FC<StockChartProps> = ({
   const confidenceScore = Math.round(avgConfidence * 100);
   const confidenceLevel = confidenceScore > 60 ? 'High' : confidenceScore > 40 ? 'Medium' : 'Low';
 
-  // For smooth connection: create a single combined line that changes color
-  // Historical ends at last price, prediction starts from that same point
+  // Get last historical price for connecting the prediction line
   const lastHistPrice = historicalPricesData[historicalPricesData.length - 1];
 
   // Prepare datasets with gradient
-  // Note: allDates = [...historicalDates, todayLabel, ...predictionDates]
-  // So we need: historical data points + 1 for "Today" bridge + prediction points
+  // Prediction line starts from last historical price for smooth visual connection
   const data = {
     labels: allDates,
     datasets: [
       {
         label: 'Historical',
-        // Historical data + lastHistPrice at "Today" position + nulls for prediction dates
-        data: [...historicalPricesData, lastHistPrice, ...Array(predictionPrices.length).fill(null)],
+        // Historical data + nulls for prediction dates
+        data: [...historicalPricesData, ...Array(filteredPredictionPrices.length).fill(null)],
         borderColor: 'rgb(139, 92, 246)', // purple
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -103,14 +105,16 @@ const StockChart: React.FC<StockChartProps> = ({
         },
         fill: true,
         tension: 0.4,
+        cubicInterpolationMode: 'monotone' as const, // Smoother curves that don't overshoot
         pointRadius: 0,
         pointHoverRadius: 5,
         borderWidth: 2,
       },
       {
         label: 'Predicted',
-        // Nulls for historical + lastHistPrice at "Today" position (bridge) + predictions
-        data: [...Array(historicalPrices.length).fill(null), lastHistPrice, ...predictionPrices],
+        // Start from last historical price point, then show predictions
+        // This creates a smooth visual connection between the two lines
+        data: [...Array(historicalPrices.length - 1).fill(null), lastHistPrice, ...filteredPredictionPrices],
         borderColor: 'rgb(96, 165, 250)', // lighter blue
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -120,7 +124,8 @@ const StockChart: React.FC<StockChartProps> = ({
           return gradient;
         },
         fill: true,
-        tension: 0.4, // Same tension for smooth curve continuity
+        tension: 0.4, // Match historical tension for tangent connection
+        cubicInterpolationMode: 'monotone' as const, // Smoother curves that don't overshoot
         pointRadius: 0,
         pointHoverRadius: 5,
         borderWidth: 2,

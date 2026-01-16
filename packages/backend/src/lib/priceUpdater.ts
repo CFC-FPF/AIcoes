@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
+const TWELVEDATA_BASE_URL = "https://api.twelvedata.com";
 
 interface Quote {
   date: number;
@@ -12,7 +12,7 @@ interface Quote {
 }
 
 /**
- * Verifica se é necessário atualizar dados de preços
+ * Check if price update is needed
  */
 export async function needsPriceUpdate(stockId: number): Promise<boolean> {
   const { data, error } = await supabase
@@ -48,41 +48,38 @@ export async function needsPriceUpdate(stockId: number): Promise<boolean> {
 }
 
 /**
- * Fetch historical candle data from Finnhub
+ * Fetch historical data from Twelve Data
  */
-async function fetchFinnhubCandles(
+async function fetchTwelveDataPrices(
   symbol: string,
-  startDate: Date,
-  endDate: Date
+  outputSize: number = 30
 ): Promise<Quote[]> {
-  const apiKey = process.env.FINNHUB_API_KEY;
+  const apiKey = process.env.TWELVEDATA_API_KEY;
 
-  const from = Math.floor(startDate.getTime() / 1000);
-  const to = Math.floor(endDate.getTime() / 1000);
-
-  const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
+  const url = `${TWELVEDATA_BASE_URL}/time_series?symbol=${symbol}&interval=1day&outputsize=${outputSize}&apikey=${apiKey}`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.s === "no_data" || !data.c) {
+    if (data.status === "error" || !data.values) {
+      console.error(`Twelve Data error for ${symbol}:`, data.message || "No data");
       return [];
     }
 
-    // Finnhub returns arrays: c (close), h (high), l (low), o (open), t (timestamp), v (volume)
-    const quotes: Quote[] = data.t.map((timestamp: number, i: number) => ({
-      date: timestamp,
-      open: data.o[i],
-      high: data.h[i],
-      low: data.l[i],
-      close: data.c[i],
-      volume: data.v[i],
+    // Twelve Data returns newest first, we need to reverse for DB insert
+    const quotes: Quote[] = data.values.map((item: any) => ({
+      date: Math.floor(new Date(item.datetime).getTime() / 1000),
+      open: parseFloat(item.open),
+      high: parseFloat(item.high),
+      low: parseFloat(item.low),
+      close: parseFloat(item.close),
+      volume: parseInt(item.volume, 10),
     }));
 
-    return quotes.filter((q) => q.open && q.high && q.low && q.close);
+    return quotes.reverse(); // Oldest first
   } catch (error: any) {
-    console.error(`Error fetching ${symbol} from Finnhub:`, error.message || error);
+    console.error(`Error fetching ${symbol} from Twelve Data:`, error.message || error);
     return [];
   }
 }
@@ -130,32 +127,13 @@ export async function updatePricesIfNeeded(
     return;
   }
 
-  console.log(`🔄 [${symbol}] Updating price data from Finnhub...`);
+  console.log(`🔄 [${symbol}] Updating price data from Twelve Data...`);
 
-  const { data: lastPriceData } = await supabase
-    .from("prices")
-    .select("trade_date")
-    .eq("stock_id", stockId)
-    .order("trade_date", { ascending: false })
-    .limit(1)
-    .single();
-
-  let startDate: Date;
-  if (lastPriceData) {
-    startDate = new Date(lastPriceData.trade_date + "T00:00:00Z");
-    startDate.setDate(startDate.getDate() + 1);
-  } else {
-    // Finnhub free tier: last 1 year of data
-    startDate = new Date();
-    startDate.setDate(startDate.getDate() - 365);
-  }
-
-  const endDate = new Date();
-
-  const quotes = await fetchFinnhubCandles(symbol, startDate, endDate);
+  // Fetch last 30 days of data
+  const quotes = await fetchTwelveDataPrices(symbol, 30);
 
   if (quotes.length === 0) {
-    console.log(`📊 [${symbol}] No new data available from Finnhub`);
+    console.log(`📊 [${symbol}] No data available from Twelve Data`);
     return;
   }
 

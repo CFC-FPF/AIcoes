@@ -7,13 +7,14 @@ const router = Router();
 router.get("/:symbol", async (req, res) => {
   try {
     const symbol = req.params.symbol.toUpperCase();
-    
+
     const news = await getCompanyNews(symbol);
-    
-    if (news.length === 0) {
+
+    // Handle case where Finnhub returns an error object instead of array
+    if (!Array.isArray(news) || news.length === 0) {
       return res.json({ sentiments: [] });
     }
-    
+
     const analysis = await analyzeSentiment(symbol, news);
     res.json(analysis);
   } catch (error) {

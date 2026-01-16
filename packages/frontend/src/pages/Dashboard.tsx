@@ -175,6 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             ) : stock && historicalPrices.length > 0 ? (
               <div className="w-full h-[600px] max-h-full">
                 <StockChart
+                  key={stock.symbol}
                   historicalPrices={historicalPrices}
                   predictions={predictions}
                   symbol={stock.symbol}

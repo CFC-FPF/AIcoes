@@ -87,13 +87,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       return;
     }
 
-    if (stock?.symbol) {
-      fetch(`${import.meta.env.VITE_API_URL}/api/sentiment/${stock.symbol}`)
-        .then(r => r.json())
-        .then(data => setSentiments(data.sentiments || []))
-        .catch(err => console.error("Failed to fetch sentiment:", err));
-    }
-
     // Reset states when symbol changes
     setLoading(true);
     setError(null);
@@ -115,6 +108,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         setLoading(false);
       });
   }, [symbol]); // Re-fetch when symbol changes
+
+  // Fetch sentiments when stock data is loaded
+  useEffect(() => {
+    if (stock?.symbol) {
+      fetch(`${API_URL}/api/sentiment/${stock.symbol}`)
+        .then(r => r.json())
+        .then(data => setSentiments(data.sentiments || []))
+        .catch(err => console.error("Failed to fetch sentiment:", err));
+    }
+  }, [stock?.symbol]);
 
   return (
     // Full-height container with dark background - exactly 100vh, no scrolling

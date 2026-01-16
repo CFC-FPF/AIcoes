@@ -1,16 +1,20 @@
-import yahooFinance from "yahoo-finance2";
 import { supabase } from "./supabase";
-import type { YahooQuote } from "shared";
+
+const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
+
+interface Quote {
+  date: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
 
 /**
  * Verifica se é necessário atualizar dados de preços
- * Retorna true se:
- * - Não há dados na BD
- * - Último trade_date < hoje
- * - Já passou do horário de fecho da bolsa (~22h UTC)
  */
 export async function needsPriceUpdate(stockId: number): Promise<boolean> {
-  // Busca o último trade_date disponível
   const { data, error } = await supabase
     .from("prices")
     .select("trade_date")
@@ -19,7 +23,6 @@ export async function needsPriceUpdate(stockId: number): Promise<boolean> {
     .limit(1)
     .single();
 
-  // Se não há dados, precisa atualizar
   if (error || !data) {
     return true;
   }
@@ -27,74 +30,67 @@ export async function needsPriceUpdate(stockId: number): Promise<boolean> {
   const lastTradeDate = new Date(data.trade_date + "T00:00:00Z");
   const now = new Date();
 
-  // Calcula dias de diferença
   const daysDiff = Math.floor(
     (now.getTime() - lastTradeDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  // Se último trade é de hoje ou ontem após 22h UTC (18h EST), não precisa atualizar
   const currentHour = now.getUTCHours();
 
   if (daysDiff === 0) {
-    // Último trade é de hoje, não precisa atualizar
     return false;
   }
 
   if (daysDiff === 1 && currentHour < 22) {
-    // Último trade foi ontem mas ainda não passou das 22h UTC
-    // A bolsa pode ainda não ter fechado ou dados não estarem disponíveis
     return false;
   }
 
-  // Se passou mais de 1 dia, ou já é após 22h UTC, precisa atualizar
   return true;
 }
 
 /**
- * Busca dados históricos do Yahoo Finance para um período específico
- * Uses historical() API for better reliability
+ * Fetch historical candle data from Finnhub
  */
-async function fetchYahooFinanceRange(
+async function fetchFinnhubCandles(
   symbol: string,
   startDate: Date,
   endDate: Date
-): Promise<YahooQuote[]> {
-  try {
-    const result = await yahooFinance.historical(symbol, {
-      period1: startDate,
-      period2: endDate,
-      interval: "1d",
-    });
+): Promise<Quote[]> {
+  const apiKey = process.env.FINNHUB_API_KEY;
 
-    if (!result || result.length === 0) {
+  const from = Math.floor(startDate.getTime() / 1000);
+  const to = Math.floor(endDate.getTime() / 1000);
+
+  const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.s === "no_data" || !data.c) {
       return [];
     }
 
-    // Converte formato do yahoo-finance2 para nosso formato
-    const quotes: YahooQuote[] = result.map((item: any) => ({
-      date: Math.floor(new Date(item.date).getTime() / 1000),
-      open: item.open,
-      high: item.high,
-      low: item.low,
-      close: item.close,
-      volume: item.volume,
+    // Finnhub returns arrays: c (close), h (high), l (low), o (open), t (timestamp), v (volume)
+    const quotes: Quote[] = data.t.map((timestamp: number, i: number) => ({
+      date: timestamp,
+      open: data.o[i],
+      high: data.h[i],
+      low: data.l[i],
+      close: data.c[i],
+      volume: data.v[i],
     }));
 
-    // Filter out null/undefined values
-    return quotes.filter((d) => d.open && d.high && d.low && d.close);
+    return quotes.filter((q) => q.open && q.high && q.low && q.close);
   } catch (error: any) {
-    console.error(`Error fetching ${symbol} from Yahoo Finance:`, error.message || error);
+    console.error(`Error fetching ${symbol} from Finnhub:`, error.message || error);
     return [];
   }
 }
 
 /**
- * Insere preços na base de dados (upsert)
+ * Upsert prices to database
  */
-async function upsertPrices(
-  stockId: number,
-  quotes: YahooQuote[]
-): Promise<void> {
+async function upsertPrices(stockId: number, quotes: Quote[]): Promise<void> {
   if (quotes.length === 0) {
     return;
   }
@@ -121,14 +117,12 @@ async function upsertPrices(
 }
 
 /**
- * Atualiza dados de preços para uma stock se necessário
- * Busca apenas os dias em falta desde o último trade_date
+ * Update prices if needed
  */
 export async function updatePricesIfNeeded(
   stockId: number,
   symbol: string
 ): Promise<void> {
-  // Verifica se precisa atualizar
   const needsUpdate = await needsPriceUpdate(stockId);
 
   if (!needsUpdate) {
@@ -136,9 +130,8 @@ export async function updatePricesIfNeeded(
     return;
   }
 
-  console.log(`🔄 [${symbol}] Updating price data...`);
+  console.log(`🔄 [${symbol}] Updating price data from Finnhub...`);
 
-  // Busca o último trade_date
   const { data: lastPriceData } = await supabase
     .from("prices")
     .select("trade_date")
@@ -147,39 +140,29 @@ export async function updatePricesIfNeeded(
     .limit(1)
     .single();
 
-  // Define período para buscar
   let startDate: Date;
   if (lastPriceData) {
-    // Busca desde o dia seguinte ao último registro
     startDate = new Date(lastPriceData.trade_date + "T00:00:00Z");
     startDate.setDate(startDate.getDate() + 1);
   } else {
-    // Se não há dados, busca últimos 90 dias
+    // Finnhub free tier: last 1 year of data
     startDate = new Date();
-    startDate.setDate(startDate.getDate() - 90);
+    startDate.setDate(startDate.getDate() - 365);
   }
 
-  const endDate = new Date(); // Até hoje
+  const endDate = new Date();
 
-  // Busca dados da Yahoo Finance
-  const quotes = await fetchYahooFinanceRange(symbol, startDate, endDate);
+  const quotes = await fetchFinnhubCandles(symbol, startDate, endDate);
 
   if (quotes.length === 0) {
-    console.log(`📊 [${symbol}] No new data available from Yahoo Finance`);
+    console.log(`📊 [${symbol}] No new data available from Finnhub`);
     return;
   }
 
-  // Insere na base de dados
   await upsertPrices(stockId, quotes);
 
-  const oldestDate = new Date(quotes[0].date * 1000)
-    .toISOString()
-    .split("T")[0];
-  const newestDate = new Date(quotes[quotes.length - 1].date * 1000)
-    .toISOString()
-    .split("T")[0];
+  const oldestDate = new Date(quotes[0].date * 1000).toISOString().split("T")[0];
+  const newestDate = new Date(quotes[quotes.length - 1].date * 1000).toISOString().split("T")[0];
 
-  console.log(
-    `✅ [${symbol}] Updated ${quotes.length} days (${oldestDate} to ${newestDate})`
-  );
+  console.log(`✅ [${symbol}] Updated ${quotes.length} days (${oldestDate} to ${newestDate})`);
 }

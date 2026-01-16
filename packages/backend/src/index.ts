@@ -41,8 +41,8 @@ async function startServer() {
   const { testConnection } = await import('./lib/supabase.js');
   
   app.use('/api/stocks', stocksRouter);
-  
-  
+  app.use('/api/sentiment', sentiment);
+
   await testConnection();
   
   app.listen(PORT, () => {

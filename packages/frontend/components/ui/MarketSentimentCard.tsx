@@ -1,10 +1,8 @@
 import React from 'react';
 import Card from './Card';
 
-type SentimentType = 'bullish' | 'neutral' | 'ai-insight';
-
 interface SentimentItemProps {
-  type: SentimentType;
+  type: string;
   title: string;
   description: string;
 }
@@ -19,6 +17,14 @@ const SentimentItem: React.FC<SentimentItemProps> = ({ type, title, description 
           icon: '📈',
           iconColor: 'text-emerald-400',
           titleColor: 'text-emerald-400',
+        };
+      case 'bearish':
+        return {
+          bg: 'bg-red-950/40',
+          border: 'border-red-500/30',
+          icon: '📉',
+          iconColor: 'text-red-400',
+          titleColor: 'text-red-400',
         };
       case 'neutral':
         return {
@@ -35,6 +41,14 @@ const SentimentItem: React.FC<SentimentItemProps> = ({ type, title, description 
           icon: '🔮',
           iconColor: 'text-purple-400',
           titleColor: 'text-purple-400',
+        };
+      default:
+        return {
+          bg: 'bg-gray-900/40',
+          border: 'border-gray-500/30',
+          icon: '📊',
+          iconColor: 'text-gray-400',
+          titleColor: 'text-gray-400',
         };
     }
   };
@@ -59,7 +73,7 @@ const SentimentItem: React.FC<SentimentItemProps> = ({ type, title, description 
 };
 
 interface SentimentData {
-  type: SentimentType;
+  type: string; // Allow any type from API, component handles unknown types gracefully
   title: string;
   description: string;
 }

@@ -2,9 +2,12 @@
 import "./loadEnv";
 
 // AGORA sim, os outros imports
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 import { supabase } from "../lib/supabase";
 import type { Stock } from "shared";
+
+// Initialize yahoo-finance2 v3 instance
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 /**
  * Interface para os dados que vamos buscar do Yahoo Finance

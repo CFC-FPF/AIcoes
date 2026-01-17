@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase } from "../lib/supabase";
 import { updatePricesIfNeeded } from "../lib/priceUpdater";
 import { updatePredictionsIfNeeded } from "../lib/predictionUpdater";
+import { updateKeyMetricsIfNeeded } from "../lib/keyMetricsUpdater";
 import type { Stock, Price, ApiResponse } from 'shared';
 
 const router = Router();
@@ -48,10 +49,19 @@ router.get("/:symbol", async (req, res) => {
       });
     }
 
-    // Get additional company info from stocks table
+    // Auto-update key metrics if stale or missing
+    try {
+      console.log(`📡 [${symbol.toUpperCase()}] Checking if key metrics update needed...`);
+      await updateKeyMetricsIfNeeded(priceData.stock_id, symbol.toUpperCase());
+    } catch (updateError: any) {
+      // Log but don't fail - return existing data
+      console.error(`❌ Failed to update key metrics for ${symbol}:`, updateError.message);
+    }
+
+    // Get additional company info and key metrics from stocks table
     const { data: companyData, error: companyError } = await supabase
       .from("stocks")
-      .select("ceo_name, website_url, description")
+      .select("ceo_name, website_url, description, market_cap, pe_ratio, volume, week_52_high")
       .eq("symbol", symbol.toUpperCase())
       .single();
 
@@ -65,6 +75,10 @@ router.get("/:symbol", async (req, res) => {
       ceo_name: companyData?.ceo_name || null,
       website_url: companyData?.website_url || null,
       description: companyData?.description || null,
+      market_cap: companyData?.market_cap || null,
+      pe_ratio: companyData?.pe_ratio || null,
+      volume: companyData?.volume || null,
+      week_52_high: companyData?.week_52_high || null,
     };
 
     res.json({ success: true, data });

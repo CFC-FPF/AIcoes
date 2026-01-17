@@ -52,6 +52,36 @@ async function fetchStockPredictions(symbol: string) {
   }
 }
 
+// Format large numbers (e.g., market cap)
+function formatMarketCap(value: number | null): string {
+  if (value === null || value === undefined) return 'N/A';
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  return `$${value.toLocaleString()}`;
+}
+
+// Format volume (e.g., 52.3M)
+function formatVolume(value: number | null): string {
+  if (value === null || value === undefined) return 'N/A';
+  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+  return value.toLocaleString();
+}
+
+// Format price (e.g., $198.23)
+function formatPrice(value: number | null): string {
+  if (value === null || value === undefined) return 'N/A';
+  return `$${value.toFixed(2)}`;
+}
+
+// Format P/E ratio
+function formatPERatio(value: number | null): string {
+  if (value === null || value === undefined) return 'N/A';
+  return value.toFixed(2);
+}
+
 
 const Dashboard: React.FC<DashboardProps> = ({
   onSearch,
@@ -157,7 +187,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                       logoIcon={<AppleLogo />}
                     />
                     <MarketSentimentCard sentiments={sentiments} />
-                    <KeyMetricsCard />
+                    <KeyMetricsCard
+                      marketCap={formatMarketCap(stock.market_cap)}
+                      peRatio={formatPERatio(stock.pe_ratio)}
+                      volume={formatVolume(stock.volume)}
+                      fiftyTwoWeekHigh={formatPrice(stock.week_52_high)}
+                    />
                   </>
                 ) : (
                   <div className="text-gray-400 p-4">No stock data</div>
